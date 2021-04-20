@@ -1,0 +1,59 @@
+# This file is the entry point to configure your own services.
+# Files in the packages/ subdirectory configure your dependencies.
+
+# Put parameters here that don't need to change on each machine where the app is deployed
+# https://symfony.com/doc/current/best_practices/configuration.html#application-related-configuration
+parameters:
+    data_file_writer: '%env(resolve:DATA_FILE_WRITER)%'
+
+services:
+    # default configuration for services in *this* file
+    _defaults:
+        autowire: true      # Automatically injects dependencies in your services.
+        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+
+    # makes classes in src/ available to be used as services
+    # this creates a service per class whose id is the fully-qualified class name
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Entity/'
+            - '../src/Kernel.php'
+            - '../src/Tests/'
+
+    # add more service definitions when explicit configuration is needed
+    # please note that last definitions always *replace* previous ones
+    App\Service\Data\CsvFileReader:
+        arguments:
+            $keys: ['operation_date', 'user_id', 'user_type', 'operation_type', 'amount', 'currency']
+
+    App\Service\Rule\Provider\CommissionRuleProvider:
+        arguments:
+            $commissionRuleConfig:
+                - [deposit, null, 0.03]
+                - [withdraw, private, 0.3]
+                - [withdraw, business, 0.5]
+
+    App\Service\Rule\Provider\DiscountRuleProvider:
+        arguments:
+            $discountRuleConfig:
+                - [withdraw, private, 3, '1000', EUR]
+
+    App\Validator\MoneyValidator:
+        arguments:
+            $currencies: ['EUR', 'USD', 'JPY']
+
+    App\Service\Converter\Exchange\ExchangeratesCurrencyExchange:
+        arguments:
+            $baseCurrency: 'EUR'
+            $apiUrl: '%env(resolve:EXCHANGE_RATE_API_URL)%'
+            $apiKey: '%env(resolve:EXCHANGE_RATE_API_KEY)%'
+
+    app-fees-calculator.command.calculate:
+        alias: App\Command\CalculateCommand
+        public: true
+
+    App\Service\Data\FileDataWriter:
+        arguments:
+            $fileToWrite: '%data_file_writer%'

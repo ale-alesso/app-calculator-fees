@@ -1,0 +1,3 @@
+services:
+    App\Service\Converter\Exchange\CurrencyExchangeInterface:
+        public: true
